@@ -1,6 +1,16 @@
 #include "MainGame.h"
 #include <iostream>
+#include <string>
 
+void fatalError(std::string errorString)
+{
+	std::cout << errorString << std::endl;
+	std::cout << "Enter any key to quit...";
+	int tmp;
+	std::cin >> tmp;
+	SDL_Quit();
+	exit(1);
+}
 
 MainGame::MainGame()
 {
@@ -17,32 +27,46 @@ MainGame::~MainGame()
 
 void MainGame::run()
 {
-	int initSuccess = initSystems();
-	if (initSuccess < 0) {
-		return;
-	}
+	initSystems();
+
+	_sprite.init(-0.1f, -0.1f, 0.1f, 0.1f);
+
 	gameLoop();
 	
 }
 
-int MainGame::initSystems()
+void MainGame::initSystems()
 {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
-		return -1;
+		fatalError(SDL_GetError());
 	}
 
-	_window = SDL_CreateWindow("Hello World!", 100, 100, _screenWidth, _screenHeight, SDL_WINDOW_SHOWN);
+	_window = SDL_CreateWindow("Hello World!", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _screenWidth, _screenHeight, SDL_WINDOW_OPENGL);
 	if (_window == nullptr) {
-		std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
-		return -1;
+		fatalError(SDL_GetError());
 	}
+
+	SDL_GLContext glContext = SDL_GL_CreateContext(_window);
+	if (glContext == nullptr)
+	{
+		fatalError(SDL_GetError());
+	}
+
+	GLenum error = glewInit();
+	if (error != GLEW_OK)
+	{
+		fatalError("Could not initialize GLEW");
+	}
+
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void MainGame::gameLoop()
 {
 	while (_gameState != GameState::EXIT) {
 		processInput();
+		drawGame();
 	}
 }
 
@@ -57,4 +81,14 @@ void MainGame::processInput()
 			break;
 		}
 	}
+}
+
+void MainGame::drawGame()
+{
+	glClearDepth(1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	_sprite.draw();
+
+	SDL_GL_SwapWindow(_window);
 }
